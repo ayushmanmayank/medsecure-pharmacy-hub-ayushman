@@ -52,20 +52,21 @@ export default function Dashboard() {
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={salesData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(210 20% 90%)" />
-              <XAxis dataKey="month" stroke="hsl(215 15% 50%)" fontSize={12} />
-              <YAxis stroke="hsl(215 15% 50%)" fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="month" className="fill-muted-foreground" fontSize={12} />
+              <YAxis className="fill-muted-foreground" fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  background: 'hsl(0 0% 100%)',
-                  border: '1px solid hsl(210 20% 90%)',
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '12px',
+                  color: 'hsl(var(--card-foreground))',
                   boxShadow: 'var(--shadow-card)',
                 }}
               />
               <Bar
                 dataKey="sales"
-                fill="hsl(210 80% 50%)"
+                fill="hsl(155 65% 38%)"
                 radius={[8, 8, 0, 0]}
                 animationDuration={1500}
                 animationBegin={chartVisible ? 0 : 99999}
