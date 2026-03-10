@@ -11,8 +11,6 @@ const salesData = [
   { month: 'Nov', sales: 4700 },
   { month: 'Dec', sales: 6100 },
   { month: 'Jan', sales: 5400 },
-
-
 ];
 
 const recentActivity = [
