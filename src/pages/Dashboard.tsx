@@ -18,6 +18,7 @@ const recentActivity = [
   { id: 2, action: 'Low stock alert', detail: 'Amoxicillin 250mg — 12 units left', time: '22 min ago', icon: AlertTriangle },
   { id: 3, action: 'Verification completed', detail: 'Batch #MED-2026-0891 verified', time: '1 hr ago', icon: Activity },
   { id: 4, action: 'Order dispatched', detail: 'Order #ORD-4521 — In Transit', time: '3 hrs ago', icon: ArrowUpRight },
+
 ];
 
 export default function Dashboard() {
