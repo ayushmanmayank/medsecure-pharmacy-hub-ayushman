@@ -25,6 +25,9 @@ export default function Inventory() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editMed, setEditMed] = useState<Medicine | null>(null);
+
   const [newMed, setNewMed] = useState({
     name: '',
     batch: '',
@@ -35,28 +38,19 @@ export default function Inventory() {
 
   const { ref, isVisible } = useScrollAnimation();
 
-  /* =============================
-     🔥 CHANGE THIS IF PORT IS DIFFERENT
-  ============================== */
-  const API = "http://localhost:5000/api/medicines";
-  // OR if using IP:
-  // const API = "http://10.3.26.2:5000/api/medicines";
+  const API = "http://localhost:3000/api/medicines";
 
   /* =============================
-     FETCH FROM DATABASE
+     FETCH MEDICINES
   ============================== */
   const fetchMedicines = async () => {
     try {
       const res = await fetch(API);
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch medicines");
-      }
-
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setMedicines(data);
-    } catch (error) {
-      console.error("Fetch error:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -68,11 +62,6 @@ export default function Inventory() {
      ADD MEDICINE
   ============================== */
   const handleAdd = async () => {
-    if (!newMed.name || !newMed.batch) {
-      alert("Please fill required fields");
-      return;
-    }
-
     try {
       const res = await fetch(API, {
         method: "POST",
@@ -86,59 +75,53 @@ export default function Inventory() {
         })
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to add medicine");
-      }
+      if (!res.ok) throw new Error("Add failed");
 
-      setNewMed({ name: '', batch: '', stock: '', price: '', expiry: '' });
       setShowAdd(false);
+      setNewMed({ name: '', batch: '', stock: '', price: '', expiry: '' });
       fetchMedicines();
-
-    } catch (error) {
-      console.error("Add error:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   /* =============================
-     DELETE MEDICINE
+     DELETE
   ============================== */
   const handleDelete = async (id: number) => {
     try {
-      const res = await fetch(`${API}/${id}`, {
-        method: "DELETE"
-      });
-
-      if (!res.ok) {
-        throw new Error("Delete failed");
-      }
-
+      await fetch(`${API}/${id}`, { method: "DELETE" });
       fetchMedicines();
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   /* =============================
-     UPDATE STOCK
+     OPEN EDIT MODAL
   ============================== */
-  const handleEdit = async (id: number, currentStock: number) => {
-    const newStock = prompt("Enter new stock quantity:", currentStock.toString());
-    if (!newStock) return;
+  const handleEditClick = (med: Medicine) => {
+    setEditMed(med);
+    setShowEdit(true);
+  };
+
+  /* =============================
+     UPDATE MEDICINE
+  ============================== */
+  const handleUpdate = async () => {
+    if (!editMed) return;
 
     try {
-      const res = await fetch(`${API}/${id}`, {
+      await fetch(`${API}/${editMed.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stock: Number(newStock) })
+        body: JSON.stringify(editMed)
       });
 
-      if (!res.ok) {
-        throw new Error("Update failed");
-      }
-
+      setShowEdit(false);
       fetchMedicines();
-    } catch (error) {
-      console.error("Update error:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -155,19 +138,14 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Inventory
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your medicine stock
-          </p>
+          <h1 className="text-2xl font-bold">Inventory</h1>
+          <p className="text-sm text-muted-foreground">Manage your medicine stock</p>
         </div>
-        <Button
-          onClick={() => setShowAdd(true)}
-          className="gradient-primary text-primary-foreground border-0"
-        >
+        <Button onClick={() => setShowAdd(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Medicine
         </Button>
@@ -185,59 +163,51 @@ export default function Inventory() {
       </div>
 
       {/* Table */}
-      <div
-        ref={ref}
-        className={`overflow-hidden rounded-2xl border border-border bg-card ${
-          isVisible ? 'animate-slide-up' : 'opacity-0'
-        }`}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Medicine</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Batch</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Stock</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Price</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Expiry</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((med) => {
-                const status = getStatus(med.stock);
-                return (
-                  <tr key={med.id} className="border-b border-border hover:bg-accent/30">
-                    <td className="px-6 py-4 flex items-center gap-3">
-                      <div className="rounded-lg bg-primary/10 p-2">
-                        <Package className="h-4 w-4 text-primary" />
-                      </div>
-                      <span>{med.name}</span>
-                    </td>
-                    <td className="px-6 py-4">{med.batch}</td>
-                    <td className="px-6 py-4">{med.stock}</td>
-                    <td className="px-6 py-4">${Number(med.price).toFixed(2)}</td>
-                    <td className="px-6 py-4">{med.expiry?.split("T")[0]}</td>
-                    <td className="px-6 py-4">
-                      <Badge variant="outline" className={statusStyles[status]}>
-                        {status}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 flex gap-2">
-                      <button onClick={() => handleEdit(med.id, med.stock)}>
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleDelete(med.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <div ref={ref} className={`overflow-hidden rounded-xl border bg-card ${isVisible ? 'animate-slide-up' : 'opacity-0'}`}>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="p-4 text-left">Medicine</th>
+              <th className="p-4 text-left">Batch</th>
+              <th className="p-4 text-left">Stock</th>
+              <th className="p-4 text-left">Price</th>
+              <th className="p-4 text-left">Expiry</th>
+              <th className="p-4 text-left">Status</th>
+              <th className="p-4 text-left">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.map((med) => {
+              const status = getStatus(med.stock);
+              return (
+                <tr key={med.id} className="border-b hover:bg-accent/30">
+                  <td className="p-4 flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    {med.name}
+                  </td>
+                  <td className="p-4">{med.batch}</td>
+                  <td className="p-4">{med.stock}</td>
+                  <td className="p-4">${Number(med.price).toFixed(2)}</td>
+                  <td className="p-4">{med.expiry?.split("T")[0]}</td>
+                  <td className="p-4">
+                    <Badge variant="outline" className={statusStyles[status]}>
+                      {status}
+                    </Badge>
+                  </td>
+                  <td className="p-4 flex gap-2">
+                    <button onClick={() => handleEditClick(med)}>
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDelete(med.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Add Modal */}
@@ -246,43 +216,37 @@ export default function Inventory() {
           <DialogHeader>
             <DialogTitle>Add Medicine</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <Input
-              placeholder="Name"
-              value={newMed.name}
-              onChange={(e) => setNewMed({ ...newMed, name: e.target.value })}
-            />
-            <Input
-              placeholder="Batch"
-              value={newMed.batch}
-              onChange={(e) => setNewMed({ ...newMed, batch: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Stock"
-              value={newMed.stock}
-              onChange={(e) => setNewMed({ ...newMed, stock: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Price"
-              value={newMed.price}
-              onChange={(e) => setNewMed({ ...newMed, price: e.target.value })}
-            />
-            <Input
-              type="date"
-              value={newMed.expiry}
-              onChange={(e) => setNewMed({ ...newMed, expiry: e.target.value })}
-            />
-            <Button
-              onClick={handleAdd}
-              className="w-full gradient-primary text-primary-foreground border-0"
-            >
-              Add
-            </Button>
+          <div className="space-y-4">
+            <Input placeholder="Name" value={newMed.name} onChange={(e) => setNewMed({ ...newMed, name: e.target.value })} />
+            <Input placeholder="Batch" value={newMed.batch} onChange={(e) => setNewMed({ ...newMed, batch: e.target.value })} />
+            <Input type="number" placeholder="Stock" value={newMed.stock} onChange={(e) => setNewMed({ ...newMed, stock: e.target.value })} />
+            <Input type="number" placeholder="Price" value={newMed.price} onChange={(e) => setNewMed({ ...newMed, price: e.target.value })} />
+            <Input type="date" value={newMed.expiry} onChange={(e) => setNewMed({ ...newMed, expiry: e.target.value })} />
+            <Button onClick={handleAdd} className="w-full">Add</Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Medicine</DialogTitle>
+          </DialogHeader>
+
+          {editMed && (
+            <div className="space-y-4">
+              <Input value={editMed.name} onChange={(e) => setEditMed({ ...editMed, name: e.target.value })} />
+              <Input value={editMed.batch} onChange={(e) => setEditMed({ ...editMed, batch: e.target.value })} />
+              <Input type="number" value={editMed.stock} onChange={(e) => setEditMed({ ...editMed, stock: Number(e.target.value) })} />
+              <Input type="number" value={editMed.price} onChange={(e) => setEditMed({ ...editMed, price: Number(e.target.value) })} />
+              <Input type="date" value={editMed.expiry?.split("T")[0]} onChange={(e) => setEditMed({ ...editMed, expiry: e.target.value })} />
+              <Button onClick={handleUpdate} className="w-full">Update</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
